@@ -1,0 +1,28 @@
+# Build output
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+
+# IDE and user state
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Runtime state and QA captures
+*.log
+*.dmp
+qa-local/
+settings.local.json
+
+# Packaging and signing
+*.pfx
+*.snk
+*.cer
+*.msix
+*.msixbundle
+
+# OS files
+Thumbs.db
+Desktop.ini

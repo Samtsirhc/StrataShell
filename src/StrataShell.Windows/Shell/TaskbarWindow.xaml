@@ -1,0 +1,165 @@
+<managed:AppBarWindow
+    x:Class="StrataShell.Windows.Shell.TaskbarWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:managed="clr-namespace:ManagedShell.AppBar;assembly=ManagedShell.AppBar"
+    xmlns:tasks="clr-namespace:ManagedShell.WindowsTasks;assembly=ManagedShell.WindowsTasks"
+    xmlns:tray="clr-namespace:ManagedShell.WindowsTray;assembly=ManagedShell.WindowsTray"
+    Title="StrataShell Taskbar"
+    ShowInTaskbar="False"
+    Topmost="True"
+    Background="#F20B1020"
+    Foreground="#FFF7F8FC"
+    SnapsToDevicePixels="True">
+    <managed:AppBarWindow.Resources>
+        <Style x:Key="TaskButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#FFF7F8FC" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Padding" Value="9,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="9"
+                            Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#24FFFFFF" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#32FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#38FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Active">
+                    <Setter Property="Background" Value="#338AA7FF" />
+                    <Setter Property="BorderBrush" Value="#668AA7FF" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </managed:AppBarWindow.Resources>
+
+    <Grid Margin="7,5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="52" />
+            <ColumnDefinition Width="152" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="168" />
+            <ColumnDefinition Width="94" />
+        </Grid.ColumnDefinitions>
+
+        <Button
+            Grid.Column="0"
+            AutomationProperties.Name="Open full-screen Start panel"
+            Click="StartButton_Click"
+            Style="{StaticResource TaskButtonStyle}"
+            ToolTip="StrataShell">
+            <TextBlock FontFamily="Segoe Fluent Icons" FontSize="22" Text="&#xE80F;" />
+        </Button>
+
+        <ItemsControl
+            Grid.Column="1"
+            Margin="4,0,8,0"
+            ItemsSource="{Binding QuickLaunchItems}"
+            Visibility="{Binding QuickLaunchVisibility}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel ItemHeight="{Binding DataContext.TaskButtonHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                               ItemWidth="44" VerticalAlignment="Center" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button
+                        Click="QuickLaunchButton_Click"
+                        Style="{StaticResource TaskButtonStyle}"
+                        ToolTip="{Binding Shortcut.Name}">
+                        <Image Width="{Binding DataContext.TaskIconSize, RelativeSource={RelativeSource AncestorType=managed:AppBarWindow}}"
+                               Height="{Binding DataContext.TaskIconSize, RelativeSource={RelativeSource AncestorType=managed:AppBarWindow}}"
+                               Source="{Binding Icon}" />
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Grid.Column="2" ClipToBounds="True">
+            <ItemsControl ItemsSource="{Binding TasksView}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel
+                            ItemHeight="{Binding DataContext.TaskButtonHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            ItemWidth="176"
+                            Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type tasks:ApplicationWindow}">
+                        <Button Click="TaskButton_Click" Style="{StaticResource TaskButtonStyle}" ToolTip="{Binding Title}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Image Width="{Binding DataContext.TaskIconSize, RelativeSource={RelativeSource AncestorType=managed:AppBarWindow}}"
+                                       Height="{Binding DataContext.TaskIconSize, RelativeSource={RelativeSource AncestorType=managed:AppBarWindow}}"
+                                       Margin="0,0,8,0" Source="{Binding Icon}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    FontFamily="Segoe UI Variable Text"
+                                    FontSize="12"
+                                    Text="{Binding Title}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
+        <ItemsControl
+            Grid.Column="3"
+            Panel.ZIndex="2"
+            Margin="8,0"
+            ItemsSource="{Binding PinnedTrayIcons}"
+            Visibility="{Binding NotificationAreaVisibility}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel ItemHeight="32" ItemWidth="32" Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type tray:NotifyIcon}">
+                    <Button
+                        Click="TrayIcon_Click"
+                        PreviewMouseRightButtonDown="TrayIcon_RightClick"
+                        Style="{StaticResource TaskButtonStyle}"
+                        ToolTip="{Binding Title}">
+                        <Image Width="20" Height="20" Source="{Binding Icon}" />
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Button Grid.Column="4" Panel.ZIndex="2" Click="ClockButton_Click" Style="{StaticResource TaskButtonStyle}">
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock HorizontalAlignment="Center" FontSize="13" Text="{Binding TimeText}" />
+                <TextBlock HorizontalAlignment="Center" FontSize="11" Foreground="#B8FFFFFF" Text="{Binding DateText}" />
+            </StackPanel>
+        </Button>
+    </Grid>
+</managed:AppBarWindow>
