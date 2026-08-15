@@ -1,8 +1,10 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using StrataShell.Core.Configuration;
 
 namespace StrataShell.App;
@@ -11,12 +13,14 @@ namespace StrataShell.App;
 public partial class MainWindow : Window
 {
     private StrataSettings settings;
+    private readonly ObservableCollection<string> quickLaunchPaths = [];
 
     /// <summary>Creates the settings window.</summary>
     public MainWindow(StrataSettings settings, string settingsPath)
     {
         this.settings = settings;
         InitializeComponent();
+        QuickLaunchPathsListBox.ItemsSource = quickLaunchPaths;
         SettingsPathTextBox.Text = settingsPath;
         UpdateSettings(settings);
     }
@@ -29,6 +33,31 @@ public partial class MainWindow : Window
 
     /// <summary>Gets or sets whether the settings window may be destroyed.</summary>
     public bool AllowClose { get; set; }
+
+    /// <summary>Selects the taskbar page for deterministic QA and direct navigation.</summary>
+    public void SelectTaskbarTab()
+    {
+        SettingsTabs.SelectedItem = TaskbarTab;
+        Dispatcher.BeginInvoke(TaskbarScrollViewer.ScrollToEnd, System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    /// <summary>Renders the live settings visual tree to a PNG for deterministic visual regression.</summary>
+    public void SaveVisualSnapshot(string outputPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        DpiScale dpi = VisualTreeHelper.GetDpi(this);
+        int width = Math.Max(1, (int)Math.Ceiling(ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(ActualHeight * dpi.DpiScaleY));
+        RenderTargetBitmap bitmap = new(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        bitmap.Render(this);
+
+        string fullPath = Path.GetFullPath(outputPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        PngBitmapEncoder encoder = new();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using FileStream stream = File.Create(fullPath);
+        encoder.Save(stream);
+    }
 
     /// <summary>Copies a configuration snapshot into the controls.</summary>
     public void UpdateSettings(StrataSettings value)
@@ -44,9 +73,15 @@ public partial class MainWindow : Window
         AutoHideCheckBox.IsChecked = value.Taskbar.AutoHide;
         QuickLaunchCheckBox.IsChecked = value.Taskbar.ShowQuickLaunch;
         NotificationAreaCheckBox.IsChecked = value.Taskbar.ShowNotificationArea;
+        AllMonitorsCheckBox.IsChecked = value.Taskbar.ShowOnAllMonitors;
         TaskbarHeightSlider.Value = value.Taskbar.Height;
         TaskbarRowsSlider.Value = value.Taskbar.Rows;
         TaskbarIconSizeSlider.Value = value.Taskbar.IconSize;
+        quickLaunchPaths.Clear();
+        foreach (string path in value.Taskbar.QuickLaunchPaths)
+        {
+            quickLaunchPaths.Add(path);
+        }
 
         RunAtStartupCheckBox.IsChecked = value.Lifecycle.RunAtStartup;
         StartQuietlyCheckBox.IsChecked = value.Lifecycle.StartQuietly;
@@ -79,10 +114,11 @@ public partial class MainWindow : Window
             AutoHide = AutoHideCheckBox.IsChecked == true,
             ShowQuickLaunch = QuickLaunchCheckBox.IsChecked == true,
             ShowNotificationArea = NotificationAreaCheckBox.IsChecked == true,
+            ShowOnAllMonitors = AllMonitorsCheckBox.IsChecked == true,
             Height = TaskbarHeightSlider.Value,
             Rows = (int)Math.Round(TaskbarRowsSlider.Value),
             IconSize = TaskbarIconSizeSlider.Value,
-            QuickLaunchPaths = settings.Taskbar.QuickLaunchPaths,
+            QuickLaunchPaths = [.. quickLaunchPaths],
         },
         Lifecycle = new LifecycleSettings
         {
@@ -133,6 +169,16 @@ public partial class MainWindow : Window
         UpdateSettings(settings);
         SettingsApplied?.Invoke(this, settings);
     }
+
+    private void RemoveQuickLaunchButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (QuickLaunchPathsListBox.SelectedItem is string path)
+        {
+            quickLaunchPaths.Remove(path);
+        }
+    }
+
+    private void ClearQuickLaunchButton_Click(object sender, RoutedEventArgs e) => quickLaunchPaths.Clear();
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {

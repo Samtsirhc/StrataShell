@@ -1,0 +1,7 @@
+Scenario: controlled taskbar overflow validation
+Controlled QA windows: 20
+Total running task items observed by the taskbar: 30
+Visible task buttons in 96 px / two-row snapshot: 16
+Overflow sources: quickLaunch=6, tasks=30, tray=1
+Native HWND: visible=True, topmost=True, rect=0,1320,2560,1440
+Result: all task items remain reachable through the running-window overflow menu

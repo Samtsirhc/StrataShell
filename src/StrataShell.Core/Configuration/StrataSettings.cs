@@ -6,7 +6,7 @@ namespace StrataShell.Core.Configuration;
 public sealed record StrataSettings
 {
     /// <summary>The current on-disk schema version.</summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     /// <summary>Gets the schema version used to serialize this instance.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -72,6 +72,9 @@ public sealed record TaskbarSettings
 
     /// <summary>Gets whether the notification area is shown.</summary>
     public bool ShowNotificationArea { get; init; } = true;
+
+    /// <summary>Gets whether a custom taskbar is created for every connected display.</summary>
+    public bool ShowOnAllMonitors { get; init; } = true;
 
     /// <summary>Gets the Start-menu shortcut paths pinned to quick launch.</summary>
     public string[] QuickLaunchPaths { get; init; } = [];

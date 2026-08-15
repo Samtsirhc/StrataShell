@@ -1,0 +1,5 @@
+Scenario: two-monitor taskbar runtime validation
+Virtual desktop: X=-2560, Y=-4, Width=5120, Height=1444 physical pixels
+DISPLAY1: taskbar loaded, logical left=-2048, top=1052.8, width=2048, height=96
+DISPLAY2: taskbar loaded, logical left=0, top=1056, width=2048, height=96
+Result: 2 custom taskbar windows shown; forced main-process exit restored 2 Explorer taskbars

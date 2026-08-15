@@ -2,8 +2,8 @@
 
 - [x] License and third-party notices are complete.
 - [x] Secrets and machine-specific runtime data are absent from tracked files.
-- [x] Zero-warning Release build, format check, and 21 automated tests pass.
-- [x] Panel, search, real two-row layout, settings, and crash recovery have visual evidence.
+- [x] Zero-warning Release build, format check, and 28 automated tests pass.
+- [x] Panel, search, real two-row/overflow layout, settings, secondary-monitor placement, and crash recovery have visual evidence.
 - [x] Recovery-first portable install/removal instructions are public.
 - [x] Unsigned preview status, .NET runtime dependency, limitations, and checksums are documented.
 - [ ] CI reproduces restore, format, build, test, publish, and artifact upload after the authenticated push.

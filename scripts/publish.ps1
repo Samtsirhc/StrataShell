@@ -36,9 +36,11 @@ dotnet publish (Join-Path $repoRoot 'src\StrataShell.Watchdog\StrataShell.Watchd
     -p:PublishSingleFile=false -p:Version=$Version `
     -o $publishRoot
 
-$watchdogAssembly = Join-Path $publishRoot 'StrataShell.Watchdog.dll'
-if (-not (Test-Path -LiteralPath $watchdogAssembly)) {
-    throw "Watchdog publish output is incomplete: $watchdogAssembly"
+foreach ($requiredFile in @('StrataShell.exe', 'StrataShell.dll', 'StrataShell.Watchdog.exe', 'StrataShell.Watchdog.dll')) {
+    $requiredPath = Join-Path $publishRoot $requiredFile
+    if (-not (Test-Path -LiteralPath $requiredPath)) {
+        throw "Publish output is incomplete: $requiredPath"
+    }
 }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $publishRoot

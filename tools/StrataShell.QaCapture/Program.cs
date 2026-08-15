@@ -1,9 +1,38 @@
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using Forms = System.Windows.Forms;
 
 bool dpiAwarenessApplied = SetProcessDpiAwarenessContext(new nint(-4));
+
+if (args is ["--window-host", var windowCountText] &&
+    int.TryParse(windowCountText, out int windowCount) &&
+    windowCount is >= 1 and <= 40)
+{
+    Forms.Application.SetHighDpiMode(Forms.HighDpiMode.PerMonitorV2);
+    for (int index = 0; index < windowCount; index++)
+    {
+        Forms.Form form = new()
+        {
+            Text = $"StrataShell QA Window {index + 1:D2}",
+            Width = 420,
+            Height = 240,
+            StartPosition = Forms.FormStartPosition.Manual,
+            Location = new System.Drawing.Point(80 + ((index % 6) * 38), 80 + ((index % 5) * 34)),
+        };
+        form.Controls.Add(new Forms.Label
+        {
+            Text = $"Taskbar overflow witness {index + 1:D2}",
+            AutoSize = true,
+            Location = new System.Drawing.Point(24, 24),
+        });
+        form.Show();
+    }
+
+    Forms.Application.Run();
+    return 0;
+}
 
 if (args is ["--restore-taskbar"])
 {
@@ -17,53 +46,94 @@ if (args is ["--capture-window-title", var title, var windowOutput])
     return CaptureWindow(title, windowOutput);
 }
 
+if (args is ["--capture-virtual", var virtualOutput])
+{
+    return CaptureDesktop(Forms.SystemInformation.VirtualScreen, virtualOutput, dpiAwarenessApplied);
+}
+
+if (args is ["--inspect-bottom-windows"])
+{
+    return InspectBottomWindows();
+}
+
+if (args.Length == 4 && string.Equals(args[0], "--capture-bottom-strip", StringComparison.OrdinalIgnoreCase))
+{
+    if (!int.TryParse(args[1], out int stripScreenIndex) ||
+        !int.TryParse(args[2], out int stripHeight) ||
+        stripScreenIndex < 0 || stripScreenIndex >= Forms.Screen.AllScreens.Length ||
+        stripHeight <= 0)
+    {
+        Console.Error.WriteLine(JsonSerializer.Serialize(new
+        {
+            error = "Invalid bottom-strip arguments.",
+            screenCount = Forms.Screen.AllScreens.Length,
+            args,
+        }));
+        return 6;
+    }
+
+    string stripOutput = args[3];
+    System.Drawing.Rectangle screenBounds = Forms.Screen.AllScreens[stripScreenIndex].Bounds;
+    int boundedHeight = Math.Min(stripHeight, screenBounds.Height);
+    System.Drawing.Rectangle stripBounds = new(
+        screenBounds.Left,
+        screenBounds.Bottom - boundedHeight,
+        screenBounds.Width,
+        boundedHeight);
+    return CaptureDesktop(stripBounds, stripOutput, dpiAwarenessApplied);
+}
+
 if (args.Length != 1)
 {
     Console.Error.WriteLine("Usage: StrataShell.QaCapture <output.png>");
     return 2;
 }
 
-string outputPath = Path.GetFullPath(args[0]);
-Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 System.Drawing.Rectangle bounds = Forms.Screen.PrimaryScreen?.Bounds
     ?? throw new InvalidOperationException("No primary display was found.");
+return CaptureDesktop(bounds, args[0], dpiAwarenessApplied);
 
-using System.Drawing.Bitmap bitmap = new(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
-using (System.Drawing.Graphics graphics = System.Drawing.Graphics.FromImage(bitmap))
+static int CaptureDesktop(System.Drawing.Rectangle bounds, string output, bool dpiAwarenessApplied)
 {
-    nint destination = graphics.GetHdc();
-    nint source = GetDC(0);
-    try
+    string outputPath = Path.GetFullPath(output);
+    Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+    using System.Drawing.Bitmap bitmap = new(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
+    using (System.Drawing.Graphics graphics = System.Drawing.Graphics.FromImage(bitmap))
     {
-        const uint SourceCopyWithLayeredWindows = 0x40CC0020;
-        if (!BitBlt(destination, 0, 0, bounds.Width, bounds.Height,
-            source, bounds.Left, bounds.Top, SourceCopyWithLayeredWindows))
+        nint destination = graphics.GetHdc();
+        nint source = GetDC(0);
+        try
         {
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            const uint SourceCopyWithLayeredWindows = 0x40CC0020;
+            if (!BitBlt(destination, 0, 0, bounds.Width, bounds.Height,
+                source, bounds.Left, bounds.Top, SourceCopyWithLayeredWindows))
+            {
+                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            }
+        }
+        finally
+        {
+            int released = ReleaseDC(0, source);
+            if (released == 0)
+            {
+                Console.Error.WriteLine("Warning: the desktop device context could not be released.");
+            }
+            graphics.ReleaseHdc(destination);
         }
     }
-    finally
+
+    bitmap.Save(outputPath, ImageFormat.Png);
+    Console.WriteLine(JsonSerializer.Serialize(new
     {
-        int released = ReleaseDC(0, source);
-        if (released == 0)
-        {
-            Console.Error.WriteLine("Warning: the desktop device context could not be released.");
-        }
-        graphics.ReleaseHdc(destination);
-    }
+        outputPath,
+        bounds.X,
+        bounds.Y,
+        bounds.Width,
+        bounds.Height,
+        dpiAwarenessApplied,
+    }));
+    return 0;
 }
-
-bitmap.Save(outputPath, ImageFormat.Png);
-Console.WriteLine(JsonSerializer.Serialize(new
-{
-    outputPath,
-    bounds.X,
-    bounds.Y,
-    bounds.Width,
-    bounds.Height,
-    dpiAwarenessApplied,
-}));
-return 0;
 
 static int RestoreExplorerTaskbars()
 {
@@ -131,6 +201,44 @@ static int CaptureWindow(string title, string output)
     return rendered ? 0 : 5;
 }
 
+static int InspectBottomWindows()
+{
+    System.Drawing.Rectangle screen = Forms.Screen.PrimaryScreen?.Bounds
+        ?? throw new InvalidOperationException("No primary display was found.");
+    int threshold = screen.Bottom - 220;
+    List<object> windows = [];
+    int zOrder = 0;
+    EnumWindows((window, _) =>
+    {
+        int currentZ = zOrder++;
+        if (!IsWindowVisible(window) || !GetWindowRect(window, out Rect rect) || rect.Bottom <= threshold)
+        {
+            return true;
+        }
+
+        StringBuilder title = new(512);
+        StringBuilder className = new(256);
+        _ = GetWindowText(window, title, title.Capacity);
+        _ = GetClassName(window, className, className.Capacity);
+        windows.Add(new
+        {
+            zOrder = currentZ,
+            handle = $"0x{window.ToInt64():X}",
+            title = title.ToString(),
+            className = className.ToString(),
+            topmost = (GetWindowLongPtr(window, -20).ToInt64() & 0x8) != 0,
+            rect.Left,
+            rect.Top,
+            rect.Right,
+            rect.Bottom,
+        });
+        return true;
+    }, 0);
+
+    Console.WriteLine(JsonSerializer.Serialize(new { screen, windows }, QaJson.Indented));
+    return 0;
+}
+
 [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
 static extern nint FindWindow(string? className, string? windowName);
 
@@ -155,6 +263,16 @@ static extern bool PrintWindow(nint hWnd, nint hdc, uint flags);
 
 [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
 static extern nint GetWindowLongPtr(nint hWnd, int index);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool EnumWindows(EnumWindowsProc callback, nint state);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern int GetWindowText(nint window, StringBuilder text, int maximumCount);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern int GetClassName(nint window, StringBuilder className, int maximumCount);
 
 [DllImport("dwmapi.dll")]
 static extern int DwmGetWindowAttribute(nint hWnd, int attribute, out int value, int valueSize);
@@ -189,4 +307,11 @@ struct Rect
     public int Top;
     public int Right;
     public int Bottom;
+}
+
+delegate bool EnumWindowsProc(nint window, nint state);
+
+static class QaJson
+{
+    public static JsonSerializerOptions Indented { get; } = new() { WriteIndented = true };
 }

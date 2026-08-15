@@ -18,6 +18,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         Assert.True(settings.Panel.Enabled);
         Assert.False(settings.Taskbar.Enabled);
+        Assert.True(settings.Taskbar.ShowOnAllMonitors);
     }
 
     [Fact]
@@ -40,6 +41,42 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(128, loaded.Taskbar.Height);
         Assert.Equal(3, loaded.Taskbar.Rows);
         Assert.True(loaded.Lifecycle.RunAtStartup);
+        Assert.False(File.Exists(store.FilePath + ".tmp"));
+    }
+
+    [Fact]
+    public async Task LoadAsync_CorruptJson_PreservesOriginalAndReturnsDefaults()
+    {
+        string path = Path.Combine(directory, "settings.json");
+        Directory.CreateDirectory(directory);
+        const string corruptContent = "{ this is not valid json";
+        await File.WriteAllTextAsync(path, corruptContent);
+        JsonSettingsStore store = new(path);
+
+        StrataSettings settings = await store.LoadAsync();
+
+        Assert.True(settings.Panel.Enabled);
+        Assert.False(File.Exists(path));
+        string backup = Assert.Single(Directory.GetFiles(directory, "settings.json.corrupt-*"));
+        Assert.Equal(corruptContent, await File.ReadAllTextAsync(backup));
+    }
+
+    [Fact]
+    public async Task SaveAsync_ConcurrentCalls_LeaveOneCompleteValidSnapshot()
+    {
+        JsonSettingsStore store = new(Path.Combine(directory, "settings.json"));
+        Task[] saves = Enumerable.Range(1, 24)
+            .Select(index => store.SaveAsync(new StrataSettings
+            {
+                Taskbar = new TaskbarSettings { Height = 40 + index, Rows = (index % 4) + 1 },
+            }))
+            .ToArray();
+
+        await Task.WhenAll(saves);
+        StrataSettings loaded = await store.LoadAsync();
+
+        Assert.InRange(loaded.Taskbar.Height, 41, 64);
+        Assert.InRange(loaded.Taskbar.Rows, 1, 4);
         Assert.False(File.Exists(store.FilePath + ".tmp"));
     }
 

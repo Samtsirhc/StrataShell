@@ -17,21 +17,25 @@ Last updated: 2026-08-16 (Asia/Hong_Kong)
 - Built the full-screen launcher, native Win-key policy, settings, tray,
   sign-in startup, multi-row taskbar, quick-launch management, diagnostics,
   atomic settings, and independent crash watchdog.
-- Passed 18 core tests and 3 live-Windows integration tests with a zero-warning
+- Passed 24 core tests and 4 live-Windows integration tests with a zero-warning
   Release build and clean formatting check.
 - Captured physical 2560x1440 panel/search evidence, real two-row task-window
-  evidence, settings UI, and before/after forced-crash recovery evidence.
+  and 30-window overflow evidence, settings UI, and before/after forced-crash
+  recovery evidence.
+- Completed dependency-vulnerability and secret scans, recorded coverage and
+  five-minute endurance baselines, then rebuilt and revalidated the extracted
+  portable package including forced main-process termination and watchdog exit.
 
 ## Current release boundary
 
-The 0.1.0 package is an honest public preview. The primary-monitor, bottom-edge
+The 0.1.0 package is an honest public preview. The two-monitor, bottom-edge
 workflow is implemented and locally validated. The broader final-product matrix
-for multiple monitors/DPIs, accessibility modes, display and power transitions,
+for wider monitor/DPIs, accessibility modes, display and power transitions,
 virtual desktops, task attention/progress/groups, clean-machine update/uninstall,
 and a physical hardware Windows-key witness remains `IN_PROGRESS`.
 
 ## No current blocker
 
-The remaining work is compatibility breadth rather than an architectural
-impasse. The Feishu escalation path remains unused because no user-only action
-is currently required.
+Most remaining work is compatibility breadth rather than an architectural
+impasse. Public GitHub upload is paused because the cached `gh` token is invalid;
+the authorized Feishu escalation was sent successfully while local work continues.

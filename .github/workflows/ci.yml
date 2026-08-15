@@ -25,6 +25,8 @@ jobs:
         run: dotnet build StrataShell.sln -c Release --no-restore --no-incremental
       - name: Test
         run: dotnet test StrataShell.sln -c Release --no-build --logger "trx;LogFileName=tests.trx"
+      - name: Audit NuGet vulnerabilities
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/audit-packages.ps1
       - name: Publish portable build
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish.ps1 -Version 0.1.0-ci
       - uses: actions/upload-artifact@v4

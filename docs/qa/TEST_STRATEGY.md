@@ -12,6 +12,8 @@
   long-running idle/active sessions.
 - Fault injection for corrupted settings, Explorer restart, display changes,
   process crashes, denied access, missing icons, and update interruption.
+- Runtime-order probes such as `--qa-settings-roundtrip` exercise persistence
+  only after the custom taskbar and independent watchdog have initialized.
 
 ## Evidence rules
 

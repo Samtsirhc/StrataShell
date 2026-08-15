@@ -69,12 +69,15 @@ public partial class PanelWindow : Window
     }
 
     /// <summary>Sizes the panel to the entire pointer monitor and brings it forward.</summary>
-    public void ShowPanel(bool usePrimaryScreen = false)
+    public void ShowPanel(bool usePrimaryScreen = false, int? screenIndex = null)
     {
         System.Drawing.Point cursor = Forms.Cursor.Position;
-        System.Drawing.Rectangle bounds = usePrimaryScreen
-            ? Forms.Screen.PrimaryScreen?.Bounds ?? Forms.Screen.FromPoint(cursor).Bounds
-            : Forms.Screen.FromPoint(cursor).Bounds;
+        Forms.Screen target = screenIndex is int index
+            ? Forms.Screen.AllScreens[Math.Clamp(index, 0, Forms.Screen.AllScreens.Length - 1)]
+            : usePrimaryScreen
+                ? Forms.Screen.PrimaryScreen ?? Forms.Screen.FromPoint(cursor)
+                : Forms.Screen.FromPoint(cursor);
+        System.Drawing.Rectangle bounds = target.Bounds;
         Show();
         nint handle = new WindowInteropHelper(this).Handle;
         if (!SetWindowPos(handle, HwndTopmost, bounds.Left, bounds.Top, bounds.Width, bounds.Height,
@@ -239,8 +242,17 @@ public partial class PanelWindow : Window
 
     private void Launch(AppTileViewModel app)
     {
-        ShellLauncher.Launch(app.Shortcut);
-        HidePanel();
+        if (ShellLauncher.TryLaunch(app.Shortcut, out string? error))
+        {
+            HidePanel();
+            return;
+        }
+
+        System.Windows.MessageBox.Show(
+            $"{app.Name} could not be opened.\n\n{error}",
+            "StrataShell launch error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)

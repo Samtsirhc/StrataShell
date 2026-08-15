@@ -6,5 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>StrataShell.Watchdog</AssemblyName>
     <RootNamespace>StrataShell.Watchdog</RootNamespace>
+    <ApplicationIcon>..\..\assets\StrataShell.ico</ApplicationIcon>
   </PropertyGroup>
 </Project>

@@ -23,11 +23,17 @@ public static class StartMenuCatalog
             IEnumerable<string> files;
             try
             {
-                files = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                files = Directory.EnumerateFiles(root, "*", new EnumerationOptions
+                {
+                    RecurseSubdirectories = true,
+                    IgnoreInaccessible = true,
+                    ReturnSpecialDirectories = false,
+                })
                     .Where(static path => path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
-                        || path.EndsWith(".appref-ms", StringComparison.OrdinalIgnoreCase));
+                        || path.EndsWith(".appref-ms", StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
             {
                 continue;
             }

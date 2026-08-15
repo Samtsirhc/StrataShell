@@ -1,5 +1,6 @@
 using System.IO;
 using Microsoft.Win32;
+using StrataShell.Core.Apps;
 using StrataShell.Windows.Apps;
 using StrataShell.Windows.Input;
 using StrataShell.Windows.Lifecycle;
@@ -62,5 +63,16 @@ public sealed class WindowsHostIntegrationTests
 
         interceptor.Disable();
         Assert.False(interceptor.IsEnabled);
+    }
+
+    [Fact]
+    public void ShellLauncher_MissingShortcut_ReturnsErrorWithoutThrowing()
+    {
+        AppShortcut missing = new("Missing QA shortcut", Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".lnk"));
+
+        bool launched = ShellLauncher.TryLaunch(missing, out string? error);
+
+        Assert.False(launched);
+        Assert.False(string.IsNullOrWhiteSpace(error));
     }
 }

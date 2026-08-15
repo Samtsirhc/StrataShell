@@ -27,3 +27,30 @@
   then proved both main/watchdog startup and watchdog exit/recovery from the
   rebuilt artifact. Upgraded test dependencies until the NuGet vulnerability
   scan reported no known vulnerable packages.
+- Replaced destructive corrupt-settings fallback with timestamped byte-for-byte
+  preservation and added a regression test. Added settings-page review/remove/
+  clear management for quick-launch pins.
+- Added optional taskbars on every monitor, schema 3 migration, display-change
+  rebuild suppression, deterministic secondary-panel QA, and virtual-desktop
+  capture. Verified two simultaneous taskbars and a full physical 2560x1440
+  secondary panel on the current two-monitor/125% DPI topology.
+- Added concurrent atomic-save serialization, inaccessible-folder-safe catalog
+  enumeration, non-crashing launch errors, a missing-shortcut Windows test, and
+  10,000-cycle Win-key state stress coverage.
+- Replaced clipping-only high-load behavior with dedicated quick-launch,
+  running-window, and notification overflow menus. A controlled 20-window host
+  plus existing windows produced 30 tasks; 16 fit visibly across two rows and
+  all 30 were exposed by the overflow source. Added deterministic WPF render
+  snapshots and native bottom-window inspection after documenting transparent
+  AppBar capture limitations.
+- Added an editable SVG brand mark and deterministic multi-resolution ICO
+  generator, then applied the icon to both executables, WPF windows, and the
+  notification-area status icon.
+- Recorded coverage baselines (Core 93.64% line / 84.84% branch; native Windows
+  integration 14.26% line / 12.00% branch) and a five-minute taskbar endurance
+  sample with about 4 MiB private-byte growth, falling handle/thread counts,
+  and 0.36% average CPU use after warm-up.
+- A final lifecycle review found that the settings store was accidentally
+  disposed while starting the watchdog. Moved disposal to application exit and
+  added a deterministic post-taskbar runtime round trip; it exited 0, wrote the
+  pass witness, and left no watchdog process behind.

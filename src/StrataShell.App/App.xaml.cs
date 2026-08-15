@@ -25,7 +25,7 @@ public partial class App : System.Windows.Application
     private Forms.NotifyIcon? trayIcon;
     private WindowsKeyInterceptor? keyInterceptor;
     private ShellRuntime? shellRuntime;
-    private TaskbarWindow? taskbarWindow;
+    private readonly List<TaskbarWindow> taskbarWindows = [];
     private Process? watchdogProcess;
     private string? diagnosticsPath;
     private string runtimeStatus = "Ready.";
@@ -33,6 +33,7 @@ public partial class App : System.Windows.Application
     private Forms.ToolStripMenuItem? panelEnabledMenuItem;
     private Forms.ToolStripMenuItem? startupMenuItem;
     private bool restartRequested;
+    private DateTime suppressDisplayChangesUntilUtc;
 
     /// <summary>Gets the active configuration snapshot.</summary>
     public StrataSettings Settings => settings;
@@ -56,9 +57,11 @@ public partial class App : System.Windows.Application
         settingsStore = new JsonSettingsStore(settingsPath);
         diagnosticsPath = Path.Combine(Path.GetDirectoryName(settingsPath)!, "diagnostics.log");
         WriteDiagnostic("INFO", $"Starting StrataShell {typeof(App).Assembly.GetName().Version} on {Environment.OSVersion}.");
+        bool settingsLoaded = false;
         try
         {
             settings = await settingsStore.LoadAsync();
+            settingsLoaded = true;
         }
         catch (Exception exception)
         {
@@ -68,7 +71,10 @@ public partial class App : System.Windows.Application
         }
         try
         {
-            await settingsStore.SaveAsync(settings);
+            if (settingsLoaded)
+            {
+                await settingsStore.SaveAsync(settings);
+            }
         }
         catch (Exception exception)
         {
@@ -76,19 +82,55 @@ public partial class App : System.Windows.Application
         }
 
         CreateTrayIcon();
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         ConfigureInputHook();
         ConfigureTaskbar();
 
+        if (e.Args.Any(arg => string.Equals(arg, "--qa-settings-roundtrip", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                await settingsStore.SaveAsync(settings);
+                WriteDiagnostic("INFO", "QA settings round trip passed after runtime initialization.");
+                Shutdown(0);
+            }
+            catch (Exception exception)
+            {
+                WriteDiagnostic("ERROR", "QA settings round trip failed after runtime initialization.", exception);
+                Shutdown(1);
+            }
+
+            return;
+        }
+
+        string? taskbarSnapshotPath = e.Args
+            .FirstOrDefault(arg => arg.StartsWith("--taskbar-snapshot=", StringComparison.OrdinalIgnoreCase))?
+            ["--taskbar-snapshot=".Length..];
+        if (!string.IsNullOrWhiteSpace(taskbarSnapshotPath) && taskbarWindows.Count > 0)
+        {
+            await Task.Delay(2000);
+            await Dispatcher.InvokeAsync(
+                () => taskbarWindows[0].SaveVisualSnapshot(taskbarSnapshotPath),
+                System.Windows.Threading.DispatcherPriority.ContextIdle);
+            WriteDiagnostic("INFO", $"Taskbar visual snapshot written to {Path.GetFullPath(taskbarSnapshotPath)}; overflow items: {taskbarWindows[0].GetOverflowDiagnosticState()}.");
+        }
+
         bool background = e.Args.Any(arg => string.Equals(arg, "--background", StringComparison.OrdinalIgnoreCase));
         bool panelPrimary = e.Args.Any(arg => string.Equals(arg, "--panel-primary", StringComparison.OrdinalIgnoreCase));
+        int? panelScreenIndex = e.Args
+            .FirstOrDefault(arg => arg.StartsWith("--panel-screen=", StringComparison.OrdinalIgnoreCase)) is string panelScreenArg &&
+            int.TryParse(panelScreenArg["--panel-screen=".Length..], out int parsedScreenIndex)
+                ? parsedScreenIndex
+                : null;
+        bool settingsTaskbar = e.Args.Any(arg => string.Equals(arg, "--settings-taskbar", StringComparison.OrdinalIgnoreCase));
         string? searchQuery = e.Args
             .FirstOrDefault(arg => arg.StartsWith("--search=", StringComparison.OrdinalIgnoreCase))?
             ["--search=".Length..];
-        if (panelPrimary)
+        if (panelPrimary || panelScreenIndex is not null)
         {
             panelWindow ??= CreatePanelWindow();
             panelWindow.ApplySettings(settings.Panel);
-            panelWindow.ShowPanel(usePrimaryScreen: true);
+            panelWindow.ShowPanel(usePrimaryScreen: panelPrimary, screenIndex: panelScreenIndex);
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 panelWindow.SetSearchQuery(searchQuery);
@@ -97,6 +139,27 @@ public partial class App : System.Windows.Application
         else if (!background || !settings.Lifecycle.StartQuietly)
         {
             ShowSettings();
+            if (settingsTaskbar)
+            {
+                settingsWindow?.SelectTaskbarTab();
+            }
+        }
+
+        string? settingsSnapshotPath = e.Args
+            .FirstOrDefault(arg => arg.StartsWith("--settings-snapshot=", StringComparison.OrdinalIgnoreCase))?
+            ["--settings-snapshot=".Length..];
+        if (!string.IsNullOrWhiteSpace(settingsSnapshotPath))
+        {
+            ShowSettings();
+            if (settingsTaskbar)
+            {
+                settingsWindow?.SelectTaskbarTab();
+            }
+            await Task.Delay(750);
+            await Dispatcher.InvokeAsync(
+                () => settingsWindow!.SaveVisualSnapshot(settingsSnapshotPath),
+                System.Windows.Threading.DispatcherPriority.ContextIdle);
+            WriteDiagnostic("INFO", $"Settings visual snapshot written to {Path.GetFullPath(settingsSnapshotPath)}.");
         }
     }
 
@@ -213,6 +276,7 @@ public partial class App : System.Windows.Application
 
     private void ConfigureTaskbar()
     {
+        suppressDisplayChangesUntilUtc = DateTime.UtcNow.AddSeconds(3);
         StopTaskbar();
         runtimeStatus = "Ready.";
         runtimeStatusIsError = false;
@@ -234,13 +298,20 @@ public partial class App : System.Windows.Application
         {
             WriteDiagnostic("INFO", $"Starting custom taskbar: height={settings.Taskbar.Height}, rows={settings.Taskbar.Rows}, iconSize={settings.Taskbar.IconSize}.");
             shellRuntime = new ShellRuntime();
-            taskbarWindow = new TaskbarWindow(shellRuntime, settings.Taskbar);
-            taskbarWindow.StartRequested += (_, _) => TogglePanel();
-            taskbarWindow.ClockRequested += (_, _) => ShowSettings();
-            taskbarWindow.Loaded += (_, _) => WriteDiagnostic("INFO",
-                $"Custom taskbar loaded at left={taskbarWindow.Left}, top={taskbarWindow.Top}, width={taskbarWindow.ActualWidth}, height={taskbarWindow.ActualHeight}, visible={taskbarWindow.IsVisible}.");
-            taskbarWindow.Show();
-            WriteDiagnostic("INFO", "Custom taskbar window shown.");
+            IEnumerable<Forms.Screen> screens = settings.Taskbar.ShowOnAllMonitors
+                ? Forms.Screen.AllScreens
+                : [Forms.Screen.PrimaryScreen ?? Forms.Screen.AllScreens[0]];
+            foreach (Forms.Screen screen in screens)
+            {
+                TaskbarWindow window = new(shellRuntime, settings.Taskbar, screen);
+                window.StartRequested += (_, _) => TogglePanel();
+                window.ClockRequested += (_, _) => ShowSettings();
+                window.Loaded += (_, _) => WriteDiagnostic("INFO",
+                    $"Custom taskbar loaded on {screen.DeviceName}: left={window.Left}, top={window.Top}, width={window.ActualWidth}, height={window.ActualHeight}, visible={window.IsVisible}; {window.GetVisualDiagnosticState()}.");
+                taskbarWindows.Add(window);
+                window.Show();
+            }
+            WriteDiagnostic("INFO", $"{taskbarWindows.Count} custom taskbar window(s) shown.");
         }
         catch (Exception exception)
         {
@@ -256,14 +327,17 @@ public partial class App : System.Windows.Application
     {
         try
         {
-            taskbarWindow?.Shutdown();
+            foreach (TaskbarWindow window in taskbarWindows)
+            {
+                window.Shutdown();
+            }
         }
         catch
         {
             // ShellRuntime.Dispose below is the recovery authority.
         }
 
-        taskbarWindow = null;
+        taskbarWindows.Clear();
         shellRuntime?.Dispose();
         shellRuntime = null;
     }
@@ -337,13 +411,27 @@ public partial class App : System.Windows.Application
         trayIcon = new Forms.NotifyIcon
         {
             Text = "StrataShell is running",
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadApplicationIcon(),
             Visible = true,
             ContextMenuStrip = menu,
         };
         trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(TogglePanel);
         menu.Opening += (_, _) => UpdateTrayState();
         UpdateTrayState();
+    }
+
+    private static System.Drawing.Icon LoadApplicationIcon()
+    {
+        System.Windows.Resources.StreamResourceInfo? resource = GetResourceStream(
+            new Uri("pack://application:,,,/Assets/StrataShell.ico", UriKind.Absolute));
+        if (resource is null)
+        {
+            return (System.Drawing.Icon)System.Drawing.SystemIcons.Application.Clone();
+        }
+
+        using Stream stream = resource.Stream;
+        using System.Drawing.Icon icon = new(stream);
+        return (System.Drawing.Icon)icon.Clone();
     }
 
     private async Task ApplyTraySettingsSafelyAsync(StrataSettings newSettings)
@@ -417,6 +505,7 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         WriteDiagnostic("INFO", "StrataShell is exiting and restoring shell-owned UI.");
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         keyInterceptor?.Dispose();
         StopTaskbar();
         panelWindow?.CloseImmediately();
@@ -426,6 +515,7 @@ public partial class App : System.Windows.Application
             trayIcon.Dispose();
         }
         watchdogProcess?.Dispose();
+        settingsStore?.Dispose();
 
         if (instanceMutex is not null)
         {
@@ -440,6 +530,17 @@ public partial class App : System.Windows.Application
                 ?? Path.Combine(AppContext.BaseDirectory, "StrataShell.exe");
             Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true });
         }
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        if (DateTime.UtcNow < suppressDisplayChangesUntilUtc)
+        {
+            return;
+        }
+
+        WriteDiagnostic("INFO", "Display configuration changed; rebuilding custom taskbars.");
+        _ = Dispatcher.BeginInvoke(ConfigureTaskbar);
     }
 
     private void WriteDiagnostic(string level, string message, Exception? exception = null)

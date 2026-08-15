@@ -53,12 +53,15 @@
         </Style>
     </managed:AppBarWindow.Resources>
 
-    <Grid Margin="7,5">
+    <Grid x:Name="TaskbarRoot" Margin="7,5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="52" />
             <ColumnDefinition Width="152" />
+            <ColumnDefinition Width="38" />
             <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="38" />
             <ColumnDefinition Width="168" />
+            <ColumnDefinition Width="38" />
             <ColumnDefinition Width="94" />
         </Grid.ColumnDefinitions>
 
@@ -73,8 +76,9 @@
 
         <ItemsControl
             Grid.Column="1"
+            ClipToBounds="True"
             Margin="4,0,8,0"
-            ItemsSource="{Binding QuickLaunchItems}"
+            ItemsSource="{Binding VisibleQuickLaunchItems}"
             Visibility="{Binding QuickLaunchVisibility}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -85,6 +89,7 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Button
+                        AutomationProperties.Name="{Binding Shortcut.Name}"
                         Click="QuickLaunchButton_Click"
                         Style="{StaticResource TaskButtonStyle}"
                         ToolTip="{Binding Shortcut.Name}">
@@ -96,7 +101,13 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <Border Grid.Column="2" ClipToBounds="True">
+        <Button Grid.Column="2" AutomationProperties.Name="More quick-launch shortcuts"
+                Click="QuickLaunchOverflowButton_Click" Style="{StaticResource TaskButtonStyle}"
+                ToolTip="All quick-launch shortcuts" Padding="0">
+            <TextBlock FontSize="18" Text="&#xE712;" FontFamily="Segoe Fluent Icons" />
+        </Button>
+
+        <Border Grid.Column="3" ClipToBounds="True">
             <ItemsControl ItemsSource="{Binding TasksView}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -108,7 +119,8 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type tasks:ApplicationWindow}">
-                        <Button Click="TaskButton_Click" Style="{StaticResource TaskButtonStyle}" ToolTip="{Binding Title}">
+                        <Button AutomationProperties.Name="{Binding Title}" Click="TaskButton_Click"
+                                Style="{StaticResource TaskButtonStyle}" ToolTip="{Binding Title}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -131,8 +143,15 @@
             </ItemsControl>
         </Border>
 
+        <Button Grid.Column="4" AutomationProperties.Name="More running windows"
+                Click="TaskOverflowButton_Click" Style="{StaticResource TaskButtonStyle}"
+                ToolTip="All running windows" Padding="0">
+            <TextBlock FontSize="18" Text="&#xE712;" FontFamily="Segoe Fluent Icons" />
+        </Button>
+
         <ItemsControl
-            Grid.Column="3"
+            Grid.Column="5"
+            ClipToBounds="True"
             Panel.ZIndex="2"
             Margin="8,0"
             ItemsSource="{Binding PinnedTrayIcons}"
@@ -145,6 +164,7 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type tray:NotifyIcon}">
                     <Button
+                        AutomationProperties.Name="{Binding Title}"
                         Click="TrayIcon_Click"
                         PreviewMouseRightButtonDown="TrayIcon_RightClick"
                         Style="{StaticResource TaskButtonStyle}"
@@ -155,7 +175,14 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <Button Grid.Column="4" Panel.ZIndex="2" Click="ClockButton_Click" Style="{StaticResource TaskButtonStyle}">
+        <Button Grid.Column="6" AutomationProperties.Name="More notification icons"
+                Click="TrayOverflowButton_Click" Style="{StaticResource TaskButtonStyle}"
+                ToolTip="All notification icons" Padding="0">
+            <TextBlock FontSize="18" Text="&#xE712;" FontFamily="Segoe Fluent Icons" />
+        </Button>
+
+        <Button Grid.Column="7" Panel.ZIndex="2" AutomationProperties.Name="Open date and time settings"
+                Click="ClockButton_Click" Style="{StaticResource TaskButtonStyle}">
             <StackPanel VerticalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" FontSize="13" Text="{Binding TimeText}" />
                 <TextBlock HorizontalAlignment="Center" FontSize="11" Foreground="#B8FFFFFF" Text="{Binding DateText}" />

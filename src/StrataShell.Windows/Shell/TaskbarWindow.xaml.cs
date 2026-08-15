@@ -1,11 +1,14 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using ManagedShell.AppBar;
 using ManagedShell.Common.Helpers;
@@ -32,13 +35,13 @@ public partial class TaskbarWindow : AppBarWindow
     private string timeText = string.Empty;
     private string dateText = string.Empty;
 
-    /// <summary>Creates a primary-monitor taskbar using the supplied settings.</summary>
-    public TaskbarWindow(ShellRuntime runtime, TaskbarSettings settings)
+    /// <summary>Creates a taskbar on the supplied monitor using the supplied settings.</summary>
+    public TaskbarWindow(ShellRuntime runtime, TaskbarSettings settings, System.Windows.Forms.Screen screen)
         : base(
             runtime.Manager.AppBarManager,
             runtime.Manager.ExplorerHelper,
             runtime.Manager.FullScreenHelper,
-            AppBarScreen.FromPrimaryScreen(),
+            AppBarScreen.FromScreen(screen),
             AppBarEdge.Bottom,
             settings.AutoHide ? AppBarMode.AutoHide : AppBarMode.Normal,
             settings.Height)
@@ -92,6 +95,9 @@ public partial class TaskbarWindow : AppBarWindow
     /// <summary>Gets quick-launch items.</summary>
     public ObservableCollection<TaskbarShortcutItem> QuickLaunchItems { get; } = [];
 
+    /// <summary>Gets the bounded quick-launch subset rendered directly on the bar.</summary>
+    public IReadOnlyList<TaskbarShortcutItem> VisibleQuickLaunchItems => [.. QuickLaunchItems.Take(6)];
+
     /// <summary>Gets per-button height used to create the requested rows.</summary>
     public double TaskButtonHeight { get; }
 
@@ -103,6 +109,35 @@ public partial class TaskbarWindow : AppBarWindow
 
     /// <summary>Gets notification-area visibility.</summary>
     public Visibility NotificationAreaVisibility { get; }
+
+    /// <summary>Returns render state used by diagnostics and release QA.</summary>
+    public string GetVisualDiagnosticState() =>
+        $"windowOpacity={Opacity:F2}, windowVisibility={Visibility}, background={Background}, " +
+        $"root={TaskbarRoot.ActualWidth:F1}x{TaskbarRoot.ActualHeight:F1}, rootOpacity={TaskbarRoot.Opacity:F2}, " +
+        $"rootVisibility={TaskbarRoot.Visibility}, topmost={Topmost}";
+
+    /// <summary>Returns item counts served by the three overflow menus.</summary>
+    public string GetOverflowDiagnosticState() =>
+        $"quickLaunch={QuickLaunchItems.Count}, tasks={TasksView.Cast<object>().OfType<ApplicationWindow>().Count()}, " +
+        $"tray={PinnedTrayIcons.Cast<object>().OfType<TrayNotifyIcon>().Count()}";
+
+    /// <summary>Renders the live WPF visual tree to a PNG for deterministic visual regression.</summary>
+    public void SaveVisualSnapshot(string outputPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        DpiScale dpi = VisualTreeHelper.GetDpi(this);
+        int width = Math.Max(1, (int)Math.Ceiling(ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(ActualHeight * dpi.DpiScaleY));
+        RenderTargetBitmap bitmap = new(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        bitmap.Render(this);
+
+        string fullPath = Path.GetFullPath(outputPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        PngBitmapEncoder encoder = new();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using FileStream stream = File.Create(fullPath);
+        encoder.Save(stream);
+    }
 
     /// <summary>Gets the current short time string.</summary>
     public string TimeText
@@ -167,7 +202,14 @@ public partial class TaskbarWindow : AppBarWindow
     {
         if (sender is WpfButton { DataContext: TaskbarShortcutItem item })
         {
-            ShellLauncher.Launch(item.Shortcut);
+            if (!ShellLauncher.TryLaunch(item.Shortcut, out string? error))
+            {
+                System.Windows.MessageBox.Show(
+                    $"{item.Shortcut.Name} could not be opened.\n\n{error}",
+                    "StrataShell launch error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
     }
 
@@ -188,14 +230,116 @@ public partial class TaskbarWindow : AppBarWindow
         }
     }
 
+    private void QuickLaunchOverflowButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not WpfButton button)
+        {
+            return;
+        }
+
+        System.Windows.Controls.ContextMenu menu = CreateOverflowMenu("Quick launch", QuickLaunchItems.Select(item =>
+            (item.Shortcut.Name, (Action)(() => LaunchQuickShortcut(item)))));
+        OpenOverflowMenu(button, menu);
+    }
+
+    private void TaskOverflowButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not WpfButton button)
+        {
+            return;
+        }
+
+        System.Windows.Controls.ContextMenu menu = CreateOverflowMenu("Running windows", TasksView
+            .Cast<object>()
+            .OfType<ApplicationWindow>()
+            .Select(window => (string.IsNullOrWhiteSpace(window.Title) ? "Untitled window" : window.Title,
+                (Action)(() => ToggleTaskWindow(window)))));
+        OpenOverflowMenu(button, menu);
+    }
+
+    private void TrayOverflowButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not WpfButton button)
+        {
+            return;
+        }
+
+        System.Windows.Controls.ContextMenu menu = CreateOverflowMenu("Notification icons", PinnedTrayIcons
+            .Cast<object>()
+            .OfType<TrayNotifyIcon>()
+            .Select(icon => (string.IsNullOrWhiteSpace(icon.Title) ? "Notification icon" : icon.Title,
+                (Action)(() => InvokeTrayIcon(icon, MouseButton.Left)))));
+        OpenOverflowMenu(button, menu);
+    }
+
+    private static System.Windows.Controls.ContextMenu CreateOverflowMenu(
+        string heading,
+        IEnumerable<(string Label, Action Invoke)> entries)
+    {
+        System.Windows.Controls.ContextMenu menu = new();
+        menu.Items.Add(new System.Windows.Controls.MenuItem { Header = heading, IsEnabled = false });
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        int count = 0;
+        foreach ((string label, Action invoke) in entries.Take(100))
+        {
+            System.Windows.Controls.MenuItem item = new() { Header = label };
+            item.Click += (_, _) => invoke();
+            menu.Items.Add(item);
+            count++;
+        }
+
+        if (count == 0)
+        {
+            menu.Items.Add(new System.Windows.Controls.MenuItem { Header = "No items", IsEnabled = false });
+        }
+
+        return menu;
+    }
+
+    private static void OpenOverflowMenu(WpfButton button, System.Windows.Controls.ContextMenu menu)
+    {
+        menu.PlacementTarget = button;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+        menu.IsOpen = true;
+    }
+
+    private static void ToggleTaskWindow(ApplicationWindow window)
+    {
+        if (window.State == ApplicationWindow.WindowState.Active)
+        {
+            window.Minimize();
+        }
+        else
+        {
+            window.BringToFront();
+        }
+    }
+
+    private static void InvokeTrayIcon(TrayNotifyIcon icon, MouseButton button)
+    {
+        uint mousePosition = MouseHelper.GetCursorPositionParam();
+        int doubleClickTime = System.Windows.Forms.SystemInformation.DoubleClickTime;
+        icon.IconMouseDown(button, mousePosition, doubleClickTime);
+        icon.IconMouseUp(button, mousePosition, doubleClickTime);
+    }
+
+    private static void LaunchQuickShortcut(TaskbarShortcutItem item)
+    {
+        if (!ShellLauncher.TryLaunch(item.Shortcut, out string? error))
+        {
+            System.Windows.MessageBox.Show(
+                $"{item.Shortcut.Name} could not be opened.\n\n{error}",
+                "StrataShell launch error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
     private void TrayIcon_Click(object sender, RoutedEventArgs e)
     {
         if (sender is WpfButton { DataContext: TrayNotifyIcon icon })
         {
-            uint mousePosition = MouseHelper.GetCursorPositionParam();
-            int doubleClickTime = System.Windows.Forms.SystemInformation.DoubleClickTime;
-            icon.IconMouseDown(MouseButton.Left, mousePosition, doubleClickTime);
-            icon.IconMouseUp(MouseButton.Left, mousePosition, doubleClickTime);
+            InvokeTrayIcon(icon, MouseButton.Left);
         }
     }
 
@@ -203,10 +347,7 @@ public partial class TaskbarWindow : AppBarWindow
     {
         if (sender is WpfButton { DataContext: TrayNotifyIcon icon })
         {
-            uint mousePosition = MouseHelper.GetCursorPositionParam();
-            int doubleClickTime = System.Windows.Forms.SystemInformation.DoubleClickTime;
-            icon.IconMouseDown(MouseButton.Right, mousePosition, doubleClickTime);
-            icon.IconMouseUp(MouseButton.Right, mousePosition, doubleClickTime);
+            InvokeTrayIcon(icon, MouseButton.Right);
             e.Handled = true;
         }
     }
@@ -214,7 +355,10 @@ public partial class TaskbarWindow : AppBarWindow
     private void ClockButton_Click(object sender, RoutedEventArgs e) =>
         ClockRequested?.Invoke(this, EventArgs.Empty);
 
-    private void OnClockTick(object? sender, EventArgs e) => UpdateClock();
+    private void OnClockTick(object? sender, EventArgs e)
+    {
+        UpdateClock();
+    }
 
     private void UpdateClock()
     {
@@ -247,4 +391,5 @@ public partial class TaskbarWindow : AppBarWindow
 
     [DllImport("user32.dll")]
     private static extern nint GetForegroundWindow();
+
 }
