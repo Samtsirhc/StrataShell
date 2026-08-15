@@ -21,6 +21,7 @@ Display evidence: primary display captured at 2560x1440 physical pixels
 | Extracted release-package smoke test | PASS; main and watchdog launched from ZIP |
 | Core coverage baseline | 93.64% line / 84.84% branch |
 | Windows integration coverage baseline | 14.26% line / 12.00% branch; native smoke focus |
+| Public Windows CI | PASS; final run completed without workflow annotations |
 
 The core suite covers bounds normalization, schema versioning, quick-launch
 deduplication, atomic JSON round trips, taskbar grid calculations, injected

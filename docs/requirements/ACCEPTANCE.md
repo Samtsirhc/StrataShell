@@ -44,7 +44,7 @@ product requirements remain visible as `IN_PROGRESS` instead of being hidden.
 | QA-001 | Unit, integration, end-to-end, accessibility, fault, and visual suites pass. | IN_PROGRESS | 28 automated tests plus runtime visual/fault checks; accessibility and compatibility breadth remains. |
 | QA-002 | Resource/latency/growth measurements meet recorded budgets. | IN_PROGRESS | 30-second two-monitor baseline and five-minute endurance sample in [`VALIDATION_REPORT`](../qa/VALIDATION_REPORT.md); longer duration and latency distributions remain. |
 | QA-003 | Input stress, Explorer/display/power/session changes and abnormal termination recover. | IN_PROGRESS | Abnormal termination passes; remaining transition matrix is open. |
-| QA-004 | Formatting, build, dependency/license, secret, and CI checks pass. | IN_PROGRESS | Local checks pass; Windows CI is configured but awaits the authenticated push. |
+| QA-004 | Formatting, build, dependency/license, secret, and CI checks pass. | PASS | Local gates pass and the public Windows CI completed restore, format, build, 28 tests, fail-closed vulnerability audit, publish, and artifact upload. |
 | QA-005 | Architecture, setup, contribution, troubleshooting, security/recovery, and release procedures are documented. | PASS | README and `docs/`, `CONTRIBUTING.md`, `SECURITY.md`. |
 | QA-006 | Final clean-machine run has no unresolved critical/high defects. | IN_PROGRESS | Current-host preview passes; clean-machine gate remains. |
 
@@ -53,5 +53,5 @@ product requirements remain visible as `IN_PROGRESS` instead of being hidden.
 | ID | Acceptance criterion | Status | Evidence |
 |---|---|---|---|
 | RELEASE-001 | Name, license, notices, screenshots, README, roadmap, security and contribution material are ready. | PASS | Repository root and `docs/images/`. |
-| RELEASE-002 | Public GitHub source/CI and tagged checksum release exist. | IN_PROGRESS | Local release candidate ready; public verification pending. |
+| RELEASE-002 | Public GitHub source/CI and tagged checksum release exist. | PASS | [`Samtsirhc/StrataShell`](https://github.com/Samtsirhc/StrataShell), passing Windows CI, and [`v0.1.0`](https://github.com/Samtsirhc/StrataShell/releases/tag/v0.1.0). |
 | RELEASE-003 | A fresh user can install, use both surfaces, configure, recover, and remove it. | IN_PROGRESS | Published procedure ready; independent clean-host witness pending. |

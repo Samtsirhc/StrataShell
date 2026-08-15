@@ -54,3 +54,7 @@
   disposed while starting the watchdog. Moved disposal to application exit and
   added a deterministic post-taskbar runtime round trip; it exited 0, wrote the
   pass witness, and left no watchdog process behind.
+- Created the public `Samtsirhc/StrataShell` repository, pushed `main`, observed
+  the Windows CI pipeline through completion, upgraded GitHub Actions away from
+  deprecated Node 20 runtimes, and published the verified ZIP/checksum as the
+  `v0.1.0` release.

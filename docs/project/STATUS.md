@@ -4,7 +4,7 @@ Last updated: 2026-08-16 (Asia/Hong_Kong)
 
 ## Current phase
 
-`Phase 4 - public 0.1.0 preview packaging and external compatibility validation`
+`Phase 5 - published 0.1.0 preview and external compatibility validation`
 
 ## Completed in the current host run
 
@@ -25,6 +25,9 @@ Last updated: 2026-08-16 (Asia/Hong_Kong)
 - Completed dependency-vulnerability and secret scans, recorded coverage and
   five-minute endurance baselines, then rebuilt and revalidated the extracted
   portable package including forced main-process termination and watchdog exit.
+- Published the public `Samtsirhc/StrataShell` repository and `v0.1.0` release;
+  both Windows CI runs passed, with the final run using current Node 24-based
+  GitHub Actions and no workflow annotations.
 
 ## Current release boundary
 
@@ -34,8 +37,8 @@ for wider monitor/DPIs, accessibility modes, display and power transitions,
 virtual desktops, task attention/progress/groups, clean-machine update/uninstall,
 and a physical hardware Windows-key witness remains `IN_PROGRESS`.
 
-## No current blocker
+## No current implementation blocker
 
-Most remaining work is compatibility breadth rather than an architectural
-impasse. Public GitHub upload is paused because the cached `gh` token is invalid;
-the authorized Feishu escalation was sent successfully while local work continues.
+Remaining work is compatibility breadth rather than an architectural impasse:
+physical Win-key evidence, clean-machine install/update/removal, accessibility,
+power/session transitions, virtual desktops, and wider DPI/display topologies.
