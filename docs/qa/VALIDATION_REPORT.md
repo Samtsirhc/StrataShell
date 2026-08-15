@@ -1,4 +1,4 @@
-# 0.1.0 validation report
+# 0.1.1 validation report
 
 Date: 2026-08-16
 
@@ -22,6 +22,7 @@ Display evidence: primary display captured at 2560x1440 physical pixels
 | Core coverage baseline | 93.64% line / 84.84% branch |
 | Windows integration coverage baseline | 14.26% line / 12.00% branch; native smoke focus |
 | Public Windows CI | PASS; final run completed without workflow annotations |
+| Out-of-process Windows UI Automation | PASS; 6/6 surfaces, focus transitions, and 3/3 overflow invocations |
 
 The core suite covers bounds normalization, schema versioning, quick-launch
 deduplication, atomic JSON round trips, taskbar grid calculations, injected
@@ -41,6 +42,7 @@ lossless corrupt-settings recovery to a timestamped backup.
 | Simultaneous taskbars on two monitors | PASS; DISPLAY1 and DISPLAY2 both registered | [`sanitized log`](evidence/2026-08-16-multi-monitor.txt) |
 | Quick-launch settings management | PASS visual surface; remove/clear paths persist through schema 3 | [`settings-taskbar.png`](../images/settings-taskbar.png) |
 | 30-window task load and overflow access | PASS; 16 visible in two rows and all 30 enumerated by the window overflow | [`taskbar-overflow-render.png`](../images/taskbar-overflow-render.png), [`sanitized log`](evidence/2026-08-16-overflow.txt) |
+| Accessible names, focus, and overflow invocation | PASS across four settings tabs, panel, and taskbar | [`sanitized log`](evidence/2026-08-16-accessibility.txt) |
 
 The physical screenshot tool opts into Per-Monitor-V2 DPI awareness and uses
 native desktop capture, avoiding the earlier 2048x1152 logical-coordinate crop.
@@ -80,17 +82,17 @@ Cold/open latency distributions and longer sleep/resume endurance remain open.
 
 - A captured physical hardware Windows-key press. The pure policy and actual
   hook installation pass, but synthetic input is intentionally ignored.
-- Touch, screen reader, high contrast, wider display/DPI topologies, display hot-plug,
+- Touch, human Narrator/NVDA review, high contrast, wider display/DPI topologies, display hot-plug,
   sleep/resume, lock/unlock, and virtual desktops.
 - Attention/progress overlays, multi-window grouping, arbitrary taskbar edges,
   and a full clean-machine install/update/rollback/uninstall matrix.
 
-These gaps are release limitations for 0.1.0 and remain tracked in the
+These gaps are release limitations for 0.1.1 and remain tracked in the
 acceptance matrix; they are not represented as passing tests.
 
 ## Release artifact
 
-`StrataShell-0.1.0-win-x64.zip` was rebuilt after the extracted-package smoke
+`StrataShell-0.1.1-win-x64.zip` was rebuilt after the extracted-package smoke
 test exposed and fixed a missing watchdog assembly. Final SHA-256:
 
-`25be77e540e8c109a7b50a448e21211b47dd234798b7f92be27d8be3f2f78ecf`
+`000429f65a9bf7f7a38d5492d2c6146a1860ec40eee4b50a6640ddb11fcc8dbb`

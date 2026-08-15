@@ -87,10 +87,16 @@
                         <TextBlock x:Name="ClockText" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Right" />
                         <TextBlock x:Name="DateText" FontSize="12" Foreground="#AEB7C9" HorizontalAlignment="Right" />
                     </StackPanel>
-                    <Button Style="{StaticResource PanelIconButton}" Content="⚙" ToolTip="Settings"
-                            Click="SettingsButton_Click" Margin="0,0,10,0" />
-                    <Button Style="{StaticResource PanelIconButton}" Content="✕" ToolTip="Close"
-                            Click="CloseButton_Click" />
+                    <Button Style="{StaticResource PanelIconButton}" ToolTip="Settings"
+                            AutomationProperties.Name="Open StrataShell settings"
+                            Click="SettingsButton_Click" Margin="0,0,10,0">
+                        <TextBlock Text="⚙" />
+                    </Button>
+                    <Button Style="{StaticResource PanelIconButton}" ToolTip="Close"
+                            AutomationProperties.Name="Close full-screen panel"
+                            Click="CloseButton_Click">
+                        <TextBlock Text="✕" />
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -100,6 +106,8 @@
                 <DockPanel>
                     <TextBlock Text="⌕" FontSize="24" Foreground="#B8C4D9" Margin="0,-3,12,0" />
                     <TextBox x:Name="SearchBox" Background="Transparent" BorderThickness="0"
+                             AutomationProperties.Name="Search applications"
+                             AutomationProperties.HelpText="Type to filter the applications shown below"
                              Foreground="#F7F9FF" CaretBrush="#F7F9FF" FontSize="17"
                              FontFamily="Segoe UI Variable Text" TextChanged="SearchBox_TextChanged"
                              ToolTip="Search apps" />
@@ -112,6 +120,7 @@
                 <TextBlock x:Name="LoadingText" Text="Loading your apps…" FontSize="16"
                            Foreground="#AEB7C9" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 <ListBox x:Name="AppsList" Background="Transparent" BorderThickness="0"
+                         AutomationProperties.Name="Applications"
                          Margin="0,36,0,0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"

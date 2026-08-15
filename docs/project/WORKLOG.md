@@ -58,3 +58,8 @@
   the Windows CI pipeline through completion, upgraded GitHub Actions away from
   deprecated Node 20 runtimes, and published the verified ZIP/checksum as the
   `v0.1.0` release.
+- Added a process-external Windows UI Automation probe and a repeatable six-
+  surface accessibility script. Labeled panel search/settings/close, settings
+  sliders and paths, and taskbar item containers. Verified semantic names,
+  real SetFocus transitions, removal of implementation-object announcements,
+  and InvokePattern opening all three overflow menus.

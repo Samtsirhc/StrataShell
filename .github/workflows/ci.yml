@@ -28,7 +28,7 @@ jobs:
       - name: Audit NuGet vulnerabilities
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/audit-packages.ps1
       - name: Publish portable build
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish.ps1 -Version 0.1.0-ci
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish.ps1 -Version 0.1.1-ci
       - uses: actions/upload-artifact@v7
         with:
           name: StrataShell-portable

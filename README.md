@@ -9,7 +9,7 @@ and is licensed under MIT.
 
 ![StrataShell full-screen panel](docs/images/panel-primary.png)
 
-## What works in 0.1.0 preview
+## What works in 0.1.1 preview
 
 - Full physical-monitor panel with search, real Start-menu shortcuts and icons,
   keyboard navigation, launch, reduced motion, and quick-launch pin/unpin.
@@ -32,7 +32,7 @@ and is licensed under MIT.
 
 1. Install the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
    for x64. With `winget`: `winget install Microsoft.DotNet.DesktopRuntime.8`.
-2. Download `StrataShell-0.1.0-win-x64.zip` and its `.sha256` file from Releases.
+2. Download `StrataShell-0.1.1-win-x64.zip` and its `.sha256` file from Releases.
 3. Verify the checksum, extract the entire directory, then run `StrataShell.exe`.
 4. Test the panel first. Enable the custom taskbar only after reading the
    recovery note in Settings.
@@ -56,7 +56,7 @@ taskbar is bottom-edge focused. Touch, high contrast,
 screen readers, display hot-plug, sleep/resume, wider monitor/DPI combinations,
 virtual desktops, attention/progress overlays, groups, and a clean-machine
 uninstall matrix still need wider validation. The dark visual system is the
-only supported theme in 0.1.0. Hardware Windows-key behavior should be verified
+only supported theme in 0.1.1. Hardware Windows-key behavior should be verified
 on each Windows feature build before enabling sign-in startup.
 
 Two 2560x1440 monitors, including a 125% DPI secondary display, were exercised
@@ -78,7 +78,8 @@ dotnet restore StrataShell.sln
 dotnet format StrataShell.sln --verify-no-changes
 dotnet build StrataShell.sln -c Release --no-restore
 dotnet test StrataShell.sln -c Release --no-build
-powershell -ExecutionPolicy Bypass -File scripts/publish.ps1 -Version 0.1.0
+powershell -ExecutionPolicy Bypass -File scripts/qa-accessibility.ps1 -NoBuild
+powershell -ExecutionPolicy Bypass -File scripts/publish.ps1 -Version 0.1.1
 ```
 
 The solution separates configuration/input policy, Windows integration,

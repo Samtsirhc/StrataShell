@@ -1,0 +1,28 @@
+StrataShell accessibility QA witness
+Date: 2026-08-16 Asia/Hong_Kong
+Host: Windows 11 Pro 25H2 build 26200.9168 x64
+Command: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qa-accessibility.ps1 -NoBuild
+
+PASS: 6/6 surfaces exposed the required semantic names through out-of-process
+Windows UI Automation and accepted real UIA SetFocus on a representative control.
+
+Surface              Elements  Named  Named/focusable  Representative focus
+Settings overview          32     29                9  Open preview
+Settings panel             50     35               13  Panel tile size
+Settings taskbar           68     50               19  Taskbar window rows
+Settings startup           38     35               14  Settings file path
+Full-screen panel         946    713              237  Search applications
+Custom taskbar             71     52               21  Open full-screen Start panel
+
+PASS: implementation-object names were absent from the taskbar UIA tree after
+container naming was applied.
+
+PASS: InvokePattern opened all three taskbar overflow menus and each expected
+menu heading was found in the live desktop UIA tree:
+- More quick-launch shortcuts -> Quick launch
+- More running windows -> Running windows
+- More notification icons -> Notification icons
+
+This witness verifies semantic exposure, keyboard focus, and overflow invocation.
+It does not claim human review with Narrator/NVDA, high-contrast rendering, touch,
+or accessibility behavior on other Windows builds and display topologies.

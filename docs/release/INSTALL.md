@@ -3,7 +3,7 @@
 ## Portable install
 
 1. Install the x64 .NET 8 Desktop Runtime.
-2. Verify `StrataShell-0.1.0-win-x64.zip` against the adjacent SHA-256 file.
+2. Verify `StrataShell-0.1.1-win-x64.zip` against the adjacent SHA-256 file.
 3. Extract all files to a user-writable directory and run `StrataShell.exe`.
 4. Configure the panel and test it before opting into the custom taskbar.
 5. Enable **Run when I sign in** only after the host build passes that test.

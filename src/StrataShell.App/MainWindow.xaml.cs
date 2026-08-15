@@ -37,8 +37,24 @@ public partial class MainWindow : Window
     /// <summary>Selects the taskbar page for deterministic QA and direct navigation.</summary>
     public void SelectTaskbarTab()
     {
-        SettingsTabs.SelectedItem = TaskbarTab;
-        Dispatcher.BeginInvoke(TaskbarScrollViewer.ScrollToEnd, System.Windows.Threading.DispatcherPriority.Loaded);
+        SelectSettingsTab("taskbar");
+    }
+
+    /// <summary>Selects a named settings page for direct navigation and QA.</summary>
+    public void SelectSettingsTab(string tabName)
+    {
+        SettingsTabs.SelectedItem = tabName.ToLowerInvariant() switch
+        {
+            "overview" => OverviewTab,
+            "panel" => PanelTab,
+            "taskbar" => TaskbarTab,
+            "startup" or "diagnostics" => StartupTab,
+            _ => OverviewTab,
+        };
+        if (SettingsTabs.SelectedItem == TaskbarTab)
+        {
+            Dispatcher.BeginInvoke(TaskbarScrollViewer.ScrollToEnd, System.Windows.Threading.DispatcherPriority.Loaded);
+        }
     }
 
     /// <summary>Renders the live settings visual tree to a PNG for deterministic visual regression.</summary>

@@ -69,7 +69,7 @@
         </Border>
 
         <TabControl x:Name="SettingsTabs" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="24,12,24,0">
-            <TabItem Header="Overview">
+            <TabItem x:Name="OverviewTab" Header="Overview">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,18,8,12">
                     <StackPanel>
                         <Border Style="{StaticResource SectionCard}">
@@ -105,7 +105,7 @@
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="Panel">
+            <TabItem x:Name="PanelTab" Header="Panel">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,18,8,12">
                     <StackPanel>
                         <Border Style="{StaticResource SectionCard}">
@@ -123,15 +123,18 @@
                                     <TextBlock Text="Tile size" />
                                     <TextBlock Grid.Column="1" Text="{Binding ElementName=TileSizeSlider, Path=Value, StringFormat={}{0:F0} px}" HorizontalAlignment="Right" />
                                 </Grid>
-                                <Slider x:Name="TileSizeSlider" Minimum="64" Maximum="140" TickFrequency="4" />
+                                <Slider x:Name="TileSizeSlider" AutomationProperties.Name="Panel tile size"
+                                        Minimum="64" Maximum="140" TickFrequency="4" />
                                 <Grid Margin="0,14,0,0">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="80" /></Grid.ColumnDefinitions>
                                     <TextBlock Text="Background opacity" />
                                     <TextBlock Grid.Column="1" Text="{Binding ElementName=PanelOpacitySlider, Path=Value, StringFormat={}{0:P0}}" HorizontalAlignment="Right" />
                                 </Grid>
-                                <Slider x:Name="PanelOpacitySlider" Minimum="0.72" Maximum="1" TickFrequency="0.02" />
+                                <Slider x:Name="PanelOpacitySlider" AutomationProperties.Name="Panel background opacity"
+                                        Minimum="0.72" Maximum="1" TickFrequency="0.02" />
                                 <TextBlock Text="Motion" Margin="0,14,0,0" />
-                                <ComboBox x:Name="MotionComboBox" HorizontalAlignment="Left">
+                                <ComboBox x:Name="MotionComboBox" AutomationProperties.Name="Panel motion"
+                                          HorizontalAlignment="Left">
                                     <ComboBoxItem Content="Reduced" /><ComboBoxItem Content="Full" />
                                 </ComboBox>
                             </StackPanel>
@@ -162,13 +165,16 @@
                                 <TextBlock Text="Dimensions" FontSize="18" FontWeight="SemiBold" />
                                 <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="Total height"/><TextBlock Grid.Column="1" Text="{Binding ElementName=TaskbarHeightSlider, Path=Value, StringFormat={}{0:F0} px}" HorizontalAlignment="Right"/></Grid>
-                                <Slider x:Name="TaskbarHeightSlider" Minimum="48" Maximum="180" TickFrequency="4" />
+                                <Slider x:Name="TaskbarHeightSlider" AutomationProperties.Name="Taskbar total height"
+                                        Minimum="48" Maximum="180" TickFrequency="4" />
                                 <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="Window rows"/><TextBlock Grid.Column="1" Text="{Binding ElementName=TaskbarRowsSlider, Path=Value, StringFormat={}{0:F0}}" HorizontalAlignment="Right"/></Grid>
-                                <Slider x:Name="TaskbarRowsSlider" Minimum="1" Maximum="4" TickFrequency="1" IsSnapToTickEnabled="True" />
+                                <Slider x:Name="TaskbarRowsSlider" AutomationProperties.Name="Taskbar window rows"
+                                        Minimum="1" Maximum="4" TickFrequency="1" IsSnapToTickEnabled="True" />
                                 <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="Icon size"/><TextBlock Grid.Column="1" Text="{Binding ElementName=TaskbarIconSizeSlider, Path=Value, StringFormat={}{0:F0} px}" HorizontalAlignment="Right"/></Grid>
-                                <Slider x:Name="TaskbarIconSizeSlider" Minimum="20" Maximum="48" TickFrequency="2" />
+                                <Slider x:Name="TaskbarIconSizeSlider" AutomationProperties.Name="Taskbar icon size"
+                                        Minimum="20" Maximum="48" TickFrequency="2" />
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource SectionCard}">
@@ -177,6 +183,7 @@
                                 <TextBlock Text="Right-click an app in the full-screen panel to pin it. Review or remove pinned shortcuts here."
                                            Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,12" />
                                 <ListBox x:Name="QuickLaunchPathsListBox" Height="110" Background="#0E1320"
+                                         AutomationProperties.Name="Pinned quick-launch shortcuts"
                                          Foreground="{StaticResource PrimaryTextBrush}" BorderBrush="#2A344A"
                                          HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                     <ListBox.ItemTemplate>
@@ -195,7 +202,7 @@
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="Startup &amp; diagnostics">
+            <TabItem x:Name="StartupTab" Header="Startup &amp; diagnostics">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,18,8,12">
                     <StackPanel>
                         <Border Style="{StaticResource SectionCard}">
@@ -209,6 +216,7 @@
                             <StackPanel>
                                 <TextBlock Text="Settings file" FontSize="18" FontWeight="SemiBold" />
                                 <TextBox x:Name="SettingsPathTextBox" IsReadOnly="True" Margin="0,12,0,0"
+                                         AutomationProperties.Name="Settings file path"
                                          Padding="10" Background="#0E1320" Foreground="{StaticResource SecondaryTextBrush}"
                                          BorderBrush="#2A344A" TextWrapping="Wrap" />
                                 <TextBlock Text="Settings are versioned and written atomically. No administrator rights are required."
@@ -227,7 +235,8 @@
 
         <Border Grid.Row="2" Background="#111724" BorderBrush="#20283A" BorderThickness="0,1,0,0" Padding="24,15">
             <Grid>
-                <TextBlock x:Name="StatusTextBlock" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="StatusTextBlock" AutomationProperties.LiveSetting="Polite"
+                           Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Hide to tray" Click="HideButton_Click" Margin="0,0,10,0" />
                     <Button Content="Save changes" Click="SaveButton_Click" Style="{StaticResource PrimaryButtonStyle}" />

@@ -1,4 +1,4 @@
-# 0.1.0 preview release checklist
+# 0.1.1 preview release checklist
 
 - [x] License and third-party notices are complete.
 - [x] Secrets and machine-specific runtime data are absent from tracked files.
@@ -11,5 +11,5 @@
 - [ ] Physical Windows-key, accessibility, multi-monitor/DPI, display/power/session, and endurance matrices pass.
 - [x] Public repository and tagged release are published; attached ZIP hash verification is recorded in the validation report.
 
-Unchecked items are final-product gates and explicit 0.1.0 limitations, not
+Unchecked items are final-product gates and explicit 0.1.1 limitations, not
 silent claims of completeness.

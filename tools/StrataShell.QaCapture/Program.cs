@@ -1,10 +1,27 @@
 using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Windows.Automation;
 using Forms = System.Windows.Forms;
 
 bool dpiAwarenessApplied = SetProcessDpiAwarenessContext(new nint(-4));
+
+if (args is ["--inspect-accessibility-title", var accessibilityTitle])
+{
+    return InspectAccessibility(accessibilityTitle);
+}
+
+if (args is ["--focus-accessibility-title", var focusWindowTitle, var focusElementName])
+{
+    return FocusAccessibility(focusWindowTitle, focusElementName);
+}
+
+if (args is ["--invoke-accessibility-title", var invokeWindowTitle, var invokeElementName, var expectedPopupName])
+{
+    return InvokeAccessibility(invokeWindowTitle, invokeElementName, expectedPopupName);
+}
 
 if (args is ["--window-host", var windowCountText] &&
     int.TryParse(windowCountText, out int windowCount) &&
@@ -237,6 +254,179 @@ static int InspectBottomWindows()
 
     Console.WriteLine(JsonSerializer.Serialize(new { screen, windows }, QaJson.Indented));
     return 0;
+}
+
+static int InspectAccessibility(string title)
+{
+    ArgumentException.ThrowIfNullOrWhiteSpace(title);
+    AutomationElement? window = AutomationElement.RootElement.FindFirst(
+        TreeScope.Children,
+        new PropertyCondition(AutomationElement.NameProperty, title, PropertyConditionFlags.IgnoreCase));
+    if (window is null)
+    {
+        Console.Error.WriteLine(JsonSerializer.Serialize(new { error = "Accessible window was not found.", title }));
+        return 7;
+    }
+
+    List<object> elements = [];
+    AutomationElementCollection descendants = window.FindAll(TreeScope.Descendants, Condition.TrueCondition);
+    foreach (AutomationElement element in descendants)
+    {
+        try
+        {
+            AutomationElement.AutomationElementInformation current = element.Current;
+            if (!current.IsControlElement)
+            {
+                continue;
+            }
+
+            System.Windows.Rect bounds = current.BoundingRectangle;
+            object? serializedBounds = double.IsFinite(bounds.X) &&
+                double.IsFinite(bounds.Y) &&
+                double.IsFinite(bounds.Width) &&
+                double.IsFinite(bounds.Height)
+                    ? new { bounds.X, bounds.Y, bounds.Width, bounds.Height }
+                    : null;
+            elements.Add(new
+            {
+                current.Name,
+                controlType = current.ControlType?.ProgrammaticName.Replace("ControlType.", string.Empty, StringComparison.Ordinal),
+                current.AutomationId,
+                current.IsEnabled,
+                current.IsKeyboardFocusable,
+                current.HasKeyboardFocus,
+                current.IsOffscreen,
+                bounds = serializedBounds,
+            });
+        }
+        catch (ElementNotAvailableException)
+        {
+            // Dynamic shell collections can change while the tree is read.
+        }
+    }
+
+    Console.WriteLine(JsonSerializer.Serialize(new
+    {
+        title,
+        processId = window.Current.ProcessId,
+        elementCount = elements.Count,
+        elements,
+    }, QaJson.Indented));
+    return elements.Count > 0 ? 0 : 8;
+}
+
+static int FocusAccessibility(string title, string elementName)
+{
+    ArgumentException.ThrowIfNullOrWhiteSpace(title);
+    ArgumentException.ThrowIfNullOrWhiteSpace(elementName);
+    AutomationElement? window = AutomationElement.RootElement.FindFirst(
+        TreeScope.Children,
+        new PropertyCondition(AutomationElement.NameProperty, title, PropertyConditionFlags.IgnoreCase));
+    if (window is null)
+    {
+        Console.Error.WriteLine(JsonSerializer.Serialize(new { error = "Accessible window was not found.", title }));
+        return 7;
+    }
+
+    AutomationElement? element = window.FindFirst(
+        TreeScope.Descendants,
+        new AndCondition(
+            new PropertyCondition(AutomationElement.NameProperty, elementName),
+            new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty, true)));
+    if (element is null)
+    {
+        Console.Error.WriteLine(JsonSerializer.Serialize(new
+        {
+            error = "Focusable accessible element was not found.",
+            title,
+            elementName,
+        }));
+        return 9;
+    }
+
+    element.SetFocus();
+    Thread.Sleep(150);
+    bool focused = element.Current.HasKeyboardFocus;
+    Console.WriteLine(JsonSerializer.Serialize(new
+    {
+        title,
+        elementName,
+        focused,
+        processId = element.Current.ProcessId,
+        controlType = element.Current.ControlType?.ProgrammaticName.Replace("ControlType.", string.Empty, StringComparison.Ordinal),
+    }, QaJson.Indented));
+    return focused ? 0 : 10;
+}
+
+static int InvokeAccessibility(string title, string elementName, string expectedPopupName)
+{
+    ArgumentException.ThrowIfNullOrWhiteSpace(title);
+    ArgumentException.ThrowIfNullOrWhiteSpace(elementName);
+    ArgumentException.ThrowIfNullOrWhiteSpace(expectedPopupName);
+    AutomationElement? window = AutomationElement.RootElement.FindFirst(
+        TreeScope.Children,
+        new PropertyCondition(AutomationElement.NameProperty, title, PropertyConditionFlags.IgnoreCase));
+    AutomationElement? element = window?.FindFirst(
+        TreeScope.Descendants,
+        new PropertyCondition(AutomationElement.NameProperty, elementName));
+    if (element is null || !element.TryGetCurrentPattern(InvokePattern.Pattern, out object? patternObject) ||
+        patternObject is not InvokePattern invokePattern)
+    {
+        Console.Error.WriteLine(JsonSerializer.Serialize(new
+        {
+            error = "Invokable accessible element was not found.",
+            title,
+            elementName,
+        }));
+        return 11;
+    }
+
+    invokePattern.Invoke();
+    bool popupFound = WaitForAccessibleName(expectedPopupName);
+    Console.WriteLine(JsonSerializer.Serialize(new
+    {
+        title,
+        elementName,
+        expectedPopupName,
+        popupFound,
+    }, QaJson.Indented));
+    return popupFound ? 0 : 12;
+}
+
+static bool WaitForAccessibleName(string expectedName)
+{
+    PropertyCondition nameCondition = new(AutomationElement.NameProperty, expectedName);
+    for (int attempt = 0; attempt < 5; attempt++)
+    {
+        Thread.Sleep(100);
+        AutomationElementCollection windows;
+        try
+        {
+            windows = AutomationElement.RootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
+        }
+        catch (ElementNotAvailableException)
+        {
+            continue;
+        }
+
+        foreach (AutomationElement candidateWindow in windows)
+        {
+            try
+            {
+                if (string.Equals(candidateWindow.Current.Name, expectedName, StringComparison.Ordinal) ||
+                    candidateWindow.FindFirst(TreeScope.Descendants, nameCondition) is not null)
+                {
+                    return true;
+                }
+            }
+            catch (ElementNotAvailableException)
+            {
+                // A popup or unrelated application window changed during enumeration.
+            }
+        }
+    }
+
+    return false;
 }
 
 [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]

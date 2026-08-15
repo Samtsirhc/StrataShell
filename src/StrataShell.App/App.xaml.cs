@@ -81,6 +81,15 @@ public partial class App : System.Windows.Application
             WriteDiagnostic("ERROR", "Normalized settings could not be persisted during startup.", exception);
         }
 
+        if (e.Args.Any(arg => string.Equals(arg, "--qa-enable-taskbar", StringComparison.OrdinalIgnoreCase)))
+        {
+            settings = settings with { Taskbar = settings.Taskbar with { Enabled = true, AutoHide = false } };
+        }
+        else if (e.Args.Any(arg => string.Equals(arg, "--qa-disable-taskbar", StringComparison.OrdinalIgnoreCase)))
+        {
+            settings = settings with { Taskbar = settings.Taskbar with { Enabled = false } };
+        }
+
         CreateTrayIcon();
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         ConfigureInputHook();
@@ -123,6 +132,9 @@ public partial class App : System.Windows.Application
                 ? parsedScreenIndex
                 : null;
         bool settingsTaskbar = e.Args.Any(arg => string.Equals(arg, "--settings-taskbar", StringComparison.OrdinalIgnoreCase));
+        string? settingsTab = e.Args
+            .FirstOrDefault(arg => arg.StartsWith("--settings-tab=", StringComparison.OrdinalIgnoreCase))?
+            ["--settings-tab=".Length..];
         string? searchQuery = e.Args
             .FirstOrDefault(arg => arg.StartsWith("--search=", StringComparison.OrdinalIgnoreCase))?
             ["--search=".Length..];
@@ -143,6 +155,10 @@ public partial class App : System.Windows.Application
             {
                 settingsWindow?.SelectTaskbarTab();
             }
+            else if (!string.IsNullOrWhiteSpace(settingsTab))
+            {
+                settingsWindow?.SelectSettingsTab(settingsTab);
+            }
         }
 
         string? settingsSnapshotPath = e.Args
@@ -155,11 +171,24 @@ public partial class App : System.Windows.Application
             {
                 settingsWindow?.SelectTaskbarTab();
             }
+            else if (!string.IsNullOrWhiteSpace(settingsTab))
+            {
+                settingsWindow?.SelectSettingsTab(settingsTab);
+            }
             await Task.Delay(750);
             await Dispatcher.InvokeAsync(
                 () => settingsWindow!.SaveVisualSnapshot(settingsSnapshotPath),
                 System.Windows.Threading.DispatcherPriority.ContextIdle);
             WriteDiagnostic("INFO", $"Settings visual snapshot written to {Path.GetFullPath(settingsSnapshotPath)}.");
+        }
+
+        string? exitDelayArgument = e.Args
+            .FirstOrDefault(arg => arg.StartsWith("--qa-exit-after-ms=", StringComparison.OrdinalIgnoreCase))?
+            ["--qa-exit-after-ms=".Length..];
+        if (int.TryParse(exitDelayArgument, out int exitDelayMilliseconds))
+        {
+            await Task.Delay(Math.Clamp(exitDelayMilliseconds, 1000, 60000));
+            Shutdown(0);
         }
     }
 

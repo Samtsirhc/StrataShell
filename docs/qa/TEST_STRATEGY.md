@@ -14,6 +14,9 @@
   process crashes, denied access, missing icons, and update interruption.
 - Runtime-order probes such as `--qa-settings-roundtrip` exercise persistence
   only after the custom taskbar and independent watchdog have initialized.
+- `scripts/qa-accessibility.ps1` launches six real UI surfaces, reads them from
+  a separate process through Windows UI Automation, moves actual focus, rejects
+  implementation-object names, and invokes every taskbar overflow menu.
 
 ## Evidence rules
 

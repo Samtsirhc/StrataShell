@@ -4,7 +4,7 @@ Last updated: 2026-08-16 (Asia/Hong_Kong)
 
 ## Current phase
 
-`Phase 5 - published 0.1.0 preview and external compatibility validation`
+`Phase 5 - 0.1.1 preview publication and external compatibility validation`
 
 ## Completed in the current host run
 
@@ -31,7 +31,7 @@ Last updated: 2026-08-16 (Asia/Hong_Kong)
 
 ## Current release boundary
 
-The 0.1.0 package is an honest public preview. The two-monitor, bottom-edge
+The 0.1.1 package is an honest public preview. The two-monitor, bottom-edge
 workflow is implemented and locally validated. The broader final-product matrix
 for wider monitor/DPIs, accessibility modes, display and power transitions,
 virtual desktops, task attention/progress/groups, clean-machine update/uninstall,
